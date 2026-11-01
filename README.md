@@ -25,6 +25,17 @@ go run ./examples/echo
 The example wires a server and a client through `net.Pipe`, so it runs without
 touching the process's stdin/stdout.
 
+## HTTP transport
+
+```go
+mux.Handle("/mcp", server.HTTPHandler())          // one POST per JSON-RPC call (batch accepted)
+client := gmcp.NewHTTPClient("https://app/mcp", nil)
+```
+
+Notifications are answered with `202` and no body. The streaming (SSE) half of
+Streamable HTTP is not implemented: these tools are request/response, so a client that
+needs server-pushed events keeps the stdio transport.
+
 ## Install
 
 ```bash

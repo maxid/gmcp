@@ -3,7 +3,7 @@
 - [x] JSON-RPC 2.0 types and error codes
 - [x] MCP initialize / ping / tools/list / tools/call
 - [x] Server and client over newline-delimited streams
-- [ ] Streamable HTTP transport
+- [x] Streamable HTTP transport (request/response + batch; SSE not implemented)
 - [ ] SSE transport
 - [ ] Resources and prompts
 - [ ] Authentication hooks
