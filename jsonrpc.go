@@ -15,6 +15,11 @@ const (
 	CodeMethodNotFound = -32601
 	CodeInvalidParams  = -32602
 	CodeInternal       = -32603
+
+	// CodeHeaderMismatch rejects a request whose HTTP headers disagree with its body.
+	CodeHeaderMismatch = -32020
+	// CodeUnsupportedProtocolVersion rejects a request for a revision the server does not serve.
+	CodeUnsupportedProtocolVersion = -32022
 )
 
 // Request is a JSON-RPC request or notification (a notification has no ID).
@@ -58,4 +63,18 @@ func (e *Error) Error() string {
 // NewError returns a JSON-RPC error.
 func NewError(code int, message string) *Error {
 	return &Error{Code: code, Message: message}
+}
+
+// NewErrorWithData returns a JSON-RPC error carrying a data payload.
+func NewErrorWithData(code int, message string, data any) *Error {
+	return &Error{Code: code, Message: message, Data: data}
+}
+
+// UnsupportedProtocolVersionError reports the revisions the server does serve,
+// so the client can retry with one of them.
+func UnsupportedProtocolVersionError(requested string, supported []string) *Error {
+	return NewErrorWithData(CodeUnsupportedProtocolVersion, "Unsupported protocol version", map[string]any{
+		"requested": requested,
+		"supported": supported,
+	})
 }

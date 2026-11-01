@@ -105,7 +105,7 @@ func TestUnknownMethodReturnsJSONRPCError(t *testing.T) {
 	client, _, cleanup := startPair(t, newTestServer(t))
 	defer cleanup()
 
-	err := client.call(context.Background(), "does/not/exist", nil, nil)
+	err := client.call(context.Background(), EraLegacy, "does/not/exist", nil, nil)
 	var rpcErr *Error
 	if !errors.As(err, &rpcErr) || rpcErr.Code != CodeMethodNotFound {
 		t.Fatalf("err = %v", err)
