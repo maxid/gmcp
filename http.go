@@ -250,6 +250,59 @@ func (c *HTTPClient) Discover(ctx context.Context) (DiscoverResult, error) {
 	return result, nil
 }
 
+// ListTools returns the tools the server exposes.
+//
+// The stdio client has had this from the start; the HTTP client could only send raw
+// requests, which forced every caller to spell out the JSON-RPC envelope and the protocol
+// generation. It belongs here because this package owns the protocol.
+func (c *HTTPClient) ListTools(ctx context.Context) ([]Tool, error) {
+	response, err := c.Call(ctx, Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      c.newID(),
+		Method:  "tools/list",
+		Params:  withRequestMeta(nil, c.meta),
+	})
+	if err != nil {
+		return nil, err
+	}
+	if response.Error != nil {
+		return nil, response.Error
+	}
+	var result ListToolsResult
+	if err := json.Unmarshal(response.Result, &result); err != nil {
+		return nil, fmt.Errorf("gmcp: decode tools/list: %w", err)
+	}
+	return result.Tools, nil
+}
+
+// CallTool invokes one tool.
+//
+// The result is returned even when IsError is set: MCP models a tool failure as a normal
+// result with content, so the caller decides whether to treat it as an error.
+func (c *HTTPClient) CallTool(ctx context.Context, name string, arguments any) (CallToolResult, error) {
+	params := map[string]any{"name": name}
+	if arguments != nil {
+		params["arguments"] = arguments
+	}
+	response, err := c.Call(ctx, Request{
+		JSONRPC: JSONRPCVersion,
+		ID:      c.newID(),
+		Method:  "tools/call",
+		Params:  mustJSON(params),
+	})
+	if err != nil {
+		return CallToolResult{}, err
+	}
+	if response.Error != nil {
+		return CallToolResult{}, response.Error
+	}
+	var result CallToolResult
+	if err := json.Unmarshal(response.Result, &result); err != nil {
+		return CallToolResult{}, fmt.Errorf("gmcp: decode tools/call: %w", err)
+	}
+	return result, nil
+}
+
 // Listen opens a subscriptions/listen stream and returns once the server
 // acknowledged it.
 func (c *HTTPClient) Listen(ctx context.Context, filter SubscriptionFilter) (*HTTPSubscription, error) {

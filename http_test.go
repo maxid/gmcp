@@ -168,3 +168,45 @@ func post(t *testing.T, handler http.Handler, body string) gmcp.Response {
 	}
 	return response
 }
+
+// The HTTP client could send raw JSON-RPC but had no tools helpers, so every caller had to
+// spell out the envelope; these two methods make it as usable as the stdio client.
+func TestHTTPClientListsAndCallsTools(t *testing.T) {
+	server := httptest.NewServer(newServer(t).HTTPHandler())
+	defer server.Close()
+
+	client := gmcp.NewHTTPClient(server.URL, server.Client())
+
+	tools, err := client.ListTools(context.Background())
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(tools) != 1 || tools[0].Name != "echo" || len(tools[0].InputSchema) == 0 {
+		t.Fatalf("tools = %+v", tools)
+	}
+
+	result, err := client.CallTool(context.Background(), "echo", map[string]any{"text": "hi"})
+	if err != nil {
+		t.Fatalf("call: %v", err)
+	}
+	if result.IsError || len(result.Content) == 0 {
+		t.Fatalf("result = %+v", result)
+	}
+	raw, err := json.Marshal(result.Content[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), "hi") {
+		t.Fatalf("content = %s", raw)
+	}
+
+	// An unknown tool is a *result* with IsError set, per the MCP contract: a tool failure is
+	// application data, not a transport failure. The caller decides what to do with it.
+	missing, err := client.CallTool(context.Background(), "missing", nil)
+	if err != nil {
+		t.Fatalf("transport error: %v", err)
+	}
+	if !missing.IsError || len(missing.Content) == 0 {
+		t.Fatalf("missing = %+v, want IsError with content", missing)
+	}
+}
